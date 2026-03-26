@@ -24,7 +24,7 @@ for (const envVar of requiredEnvVars) {
 // Configuration exportée
 export const config = {
   // Server
-  port: parseInt(process.env.PORT || '5000', 10),
+  port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
 
   // Database
@@ -41,7 +41,7 @@ export const config = {
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: process.env.REDIS_PASSWORD,
+    password: process.env.REDIS_PASSWORD ? (process.env.REDIS_PASSWORD.includes('@') ? process.env.REDIS_PASSWORD.split(':')[2].split('@')[0] : process.env.REDIS_PASSWORD) : undefined,
   },
 
   // Email
@@ -117,9 +117,9 @@ export const config = {
 
   // Application URLs - AJOUTÉ
   app: {
-    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
-    apiUrl: process.env.API_URL || (process.env.NODE_ENV === 'production' ? 'https://jealous-giraffe-ndigueul-efe7a113.koyeb.app' : 'http://localhost:5000'),
-    webUrl: process.env.WEB_URL || 'http://localhost:3000'
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8080',
+    apiUrl: process.env.API_URL || 'https://thundering-laura-ndigueul-80527457.koyeb.app',
+    webUrl: process.env.WEB_URL || 'http://localhost:8080'
   }
 };
 

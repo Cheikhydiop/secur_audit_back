@@ -9,10 +9,22 @@ export class RedisService {
     private isConnected = false;
 
     constructor() {
-        this.client = new Redis({
-            host: config.redis.host,
+        const redisHost = config.redis.host;
+        const redisPassword = config.redis.password;
+
+        // Détection de l'option TLS pour Upstash
+        const useTLS = redisHost?.includes('upstash.io');
+
+        const redisConfig: any = {
+            host: redisHost,
             port: config.redis.port,
-            password: config.redis.password,
+            password: redisPassword,
+            tls: useTLS ? {} : undefined,
+        };
+
+        this.client = new Redis(redisConfig, {
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
             retryStrategy: (times: number) => {
                 const delay = Math.min(times * 50, 2000);
                 return delay;
@@ -21,13 +33,18 @@ export class RedisService {
 
 
         this.client.on('connect', () => {
-            this.isConnected = true;
-            logger.info('Redis connected successfully');
+            if (!this.isConnected) {
+                this.isConnected = true;
+                logger.info('✅ Redis connected successfully (Upstash Mode)');
+            }
         });
 
         this.client.on('error', (error: any) => {
             this.isConnected = false;
-            logger.error('Redis connection error:', error);
+            // On ne logue l'erreur que s'il s'agit d'un vrai changement d'état ou d'une erreur critique sans polluer
+            if (error.code !== 'ECONNRESET') {
+                logger.error('Redis connection error:', error.message);
+            }
         });
 
     }
