@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Site" ADD COLUMN     "prestataire" TEXT,
+ALTER COLUMN "type" DROP NOT NULL,
+ALTER COLUMN "type" SET DEFAULT 'Technique',
+ALTER COLUMN "zone" DROP NOT NULL,
+ALTER COLUMN "zone" SET DEFAULT 'Dakar',
+ALTER COLUMN "localisation" DROP NOT NULL;

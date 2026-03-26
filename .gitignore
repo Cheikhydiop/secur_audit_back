@@ -1,0 +1,26 @@
+# Dépendances Node
+node_modules/
+dist/
+build/
+
+# Variables d'environnement (SENSIBLE - ne jamais commit!)
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# TypeScript compilé
+*.js.map
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Uploads temporaires
+uploads/
+tmp/
+
+/src/generated/prisma

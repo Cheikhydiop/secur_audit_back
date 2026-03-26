@@ -1,0 +1,393 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                    String           @id @default(uuid())
+  email                 String           @unique
+  password              String
+  name                  String
+  role                  UserRole         @default(INSPECTEUR)
+  entite                EntiteType       @default(SEC)
+  mustChangePassword    Boolean          @default(true)
+  passwordChangedAt     DateTime?
+  isActive              Boolean          @default(true)
+  isEmailVerified       Boolean          @default(false)
+  phone                 String?
+  invitationToken       String?          @unique
+  invitationTokenExpiry DateTime?
+  invitationStatus      InvitationStatus @default(PENDING)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  actions               ActionPlan[]
+  auditLogs             AuditLog[]
+  inspections           Inspection[]
+  missions              Mission[]
+  startedMissions       Mission[]         @relation("StartedMissions")
+  notifications         Notification[]
+  otpCodes              OtpCode[]
+  rapports              Rapport[]
+  sessions              Session[]
+  actionComments        ActionComment[]
+}
+
+model Session {
+  id           String        @id @default(uuid())
+  userId       String
+  refreshToken String        @unique
+  deviceType   DeviceType    @default(UNKNOWN)
+  deviceName   String?
+  deviceId     String?
+  ipAddress    String?
+  userAgent    String?
+  status       SessionStatus @default(ACTIVE)
+  isVerified   Boolean       @default(false)
+  lastActivity DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id])
+  otpCodes     OtpCode[]
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  code      String
+  purpose   String
+  consumed  Boolean  @default(false)
+  consumedAt DateTime?
+  attempts  Int      @default(0)
+  sessionId String?
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  ipAddress String?
+  user      User     @relation(fields: [userId], references: [id])
+  session   Session? @relation(fields: [sessionId], references: [id])
+}
+
+model Site {
+  id           String       @id @default(uuid())
+  nom          String
+  code         String       @unique
+  type         String?      @default("Technique")
+  zone         String?      @default("Dakar")
+  localisation String?
+  prestataire  String?
+  status       String?      @default("actif")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  inspections  Inspection[]
+  missions     Mission[]
+}
+
+model QuestionnaireTemplate {
+  id          String       @id @default(uuid())
+  nom         String?      // ex: "Audit Standard 2024"
+  version     Int          @default(1)
+  isCurrent   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  questions   Question[]
+  inspections Inspection[]
+}
+
+model Rubrique {
+  id          String     @id @default(uuid())
+  nom         String
+  description String?
+  ordre       Int        @default(0)
+  actif       Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  questions   Question[]
+}
+
+model Question {
+  id             String                 @id @default(uuid())
+  texte          String
+  helper         String?
+  ordre          Int                    @default(0)
+  ponderation    Int                    @default(1)
+  criticite      CriticiteQuestion      @default(MINEUR)
+  actif          Boolean                @default(true)
+  templateId     String?
+  categorieId    String?
+  
+  // Dynamic questionnaire features
+  typeReponse    TypeReponse            @default(OUI_NON)  // Type de réponse: OUI_NON, MULTIPLE_CHOIX, TEXTE, PHOTO, NOTE
+  optionsReponse Json?                  // Options pour les réponses multiples (pour type MULTIPLE_CHOIX)
+  estConditionnelle Boolean              @default(false)   // Est-ce une question conditionnelle?
+  conditionQuestionId String?           // ID de la question dont dépend cette question
+  conditionReponse   String?             // Réponse requise pour afficher cette question (ex: "non" si la réponse à la question précédente est "non")
+  requiredResponseOptions String?       // Pour les questions à choix multiple: quelles options rendent cette question visible
+  pointSaut          Int?                // Question N° pour le saut (si différent de la question suivante)
+  estObligatoire     Boolean             @default(false)   // La réponse est-elle obligatoire?
+  placeholder        String?             // Texte d'aide pour la saisie
+  
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  template       QuestionnaireTemplate? @relation(fields: [templateId], references: [id])
+  categorie      Rubrique?              @relation(fields: [categorieId], references: [id])
+  inspectionQuestions InspectionQuestion[]
+}
+
+model InspectionQuestion {
+  id                    String    @id @default(uuid())
+  inspectionId         String
+  questionIdOriginal   String
+  questionTextSnapshot String
+  categorieSnapshot     String
+  ordreSnapshot         Int
+  ponderationSnapshot   Int
+  criticiteSnapshot     CriticiteQuestion
+  helperSnapshot        String?
+  reponse               String?
+  observation           String?
+  recommendation        String?
+  photoUrl              String?
+  porteurEmail          String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  inspection            Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  question              Question  @relation(fields: [questionIdOriginal], references: [id])
+
+  @@index([inspectionId])
+  @@index([questionIdOriginal])
+}
+
+model Inspection {
+  id           String                 @id @default(uuid())
+  siteId       String
+  inspecteurId String
+  templateId   String?
+  date         DateTime               @default(now())
+  statut       StatusInspection       @default(EN_COURS)
+  score        Float?
+  reponses     Json
+  latitude     Float?
+  longitude    Float?
+  gpsAccuracy  Float?
+  // Start position (required)
+  latitudeStart Float?
+  longitudeStart Float?
+  dateStart    DateTime?
+  // End position (optional)
+  latitudeEnd   Float?
+  longitudeEnd  Float?
+  dateEnd      DateTime?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  actions      ActionPlan[]
+  inspecteur   User                   @relation(fields: [inspecteurId], references: [id])
+  site         Site                   @relation(fields: [siteId], references: [id])
+  template     QuestionnaireTemplate? @relation(fields: [templateId], references: [id])
+  rapports     Rapport[]
+  inspectionQuestions InspectionQuestion[]
+
+  @@index([siteId])
+  @@index([inspecteurId])
+  @@index([siteId, statut])
+  @@index([date])
+}
+
+model ActionPlan {
+  id            String       @id @default(uuid())
+  inspectionId  String
+  description   String
+  responsableId String
+  dateEcheance  DateTime
+  statut        StatusAction @default(A_FAIRE)
+  criticite     Criticite    @default(MOYENNE)
+  notes         String?
+  evidencePhotoUrl String?
+  evidenceNotes    String?
+  dueSoonNotified  Boolean      @default(false)
+  porteurEmail     String?
+  comments      ActionComment[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  inspection    Inspection   @relation(fields: [inspectionId], references: [id])
+  responsable   User         @relation(fields: [responsableId], references: [id])
+
+  @@index([inspectionId])
+  @@index([responsableId])
+}
+
+model ActionComment {
+  id        String     @id @default(uuid())
+  actionId  String
+  userId    String
+  content   String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  action    ActionPlan @relation(fields: [actionId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+}
+
+model Mission {
+  id             String        @id @default(uuid())
+  titre          String
+  description    String?
+  type           String?       @default("Audit Périodique")
+  dateDeb        DateTime      // Date prévue de l'inspection
+  dateFin        DateTime
+  dateRealisation DateTime?    // Date réelle de réalisation de l'audit
+  statut         StatusAction  @default(A_FAIRE)
+  siteId         String
+  inspecteurId   String?
+  entite         EntiteType?   // Entité gérante (SEC, CPS, SUR)
+  startedById    String?       // ID de l'utilisateur qui a démarré l'inspection
+  // Start position (required)
+  latitudeStart  Float?
+  longitudeStart Float?
+  dateStart      DateTime?
+  // End position (optional)
+  latitudeEnd    Float?
+  longitudeEnd   Float?
+  dateEnd        DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  site           Site          @relation(fields: [siteId], references: [id])
+  inspecteur     User?         @relation(fields: [inspecteurId], references: [id])
+  startedBy      User?         @relation("StartedMissions", fields: [startedById], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String   @default("")
+  entityId  String   @default("")
+  table     String?
+  recordId  String?
+  details   Json?
+  oldData   Json?
+  newData   Json?
+  ipAddress String?
+  userAgent String?
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType @default(INFO)
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  data      Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id])
+}
+
+model Rapport {
+  id           String      @id @default(uuid())
+  inspectionId String?
+  titre        String
+  urlPdf       String
+  urlExcel     String?
+  genereParId  String
+  createdAt    DateTime    @default(now())
+  generePar    User        @relation(fields: [genereParId], references: [id])
+  inspection   Inspection? @relation(fields: [inspectionId], references: [id])
+}
+
+model GlobalSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  INSPECTEUR
+  DIRIGEANT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+enum DeviceType {
+  MOBILE
+  DESKTOP
+  TABLET
+  UNKNOWN
+}
+
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+  PENDING_VERIFICATION
+}
+
+enum StatusInspection {
+  EN_COURS
+  VALIDEE
+  REJETEE
+}
+
+enum StatusAction {
+  A_FAIRE
+  EN_COURS
+  TERMINE
+  EN_RETARD
+  ANTICIPE
+  A_VALIDER
+  BLOQUE
+  ANNULE
+  ARCHIVE
+}
+
+enum Criticite {
+  FAIBLE
+  MOYENNE
+  ELEVEE
+}
+
+enum CriticiteQuestion {
+  CRITIQUE
+  MAJEUR
+  MINEUR
+}
+
+enum TypeReponse {
+  OUI_NON          // Réponse binaire (Oui/Non/N/A)
+  MULTIPLE_CHOIX   // Choix multiple avec options personnalisées
+  TEXTE            // Réponse textuelle libre
+  PHOTO            // Réponse avec photo
+  NOTE             // Note/évaluation (1-5 ou 1-10)
+  DATE             // Date
+  NOMBRE           // Nombre
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+  INSPECTION_SUBMITTED
+  ACTION_ASSIGNED
+  ACTION_DUE_SOON
+  ACTION_OVERDUE
+  INVITATION
+}
+
+enum EntiteType {
+  SEC   // Sécurité
+  CPS   // Management
+  SUR   // Sûreté
+}

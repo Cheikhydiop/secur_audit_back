@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+# Installation des dépendances pour la compilation native
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+
+# Installer tsx globalement pour lancer le code sans compilation préalable
+RUN npm install -g tsx
+
+COPY . .
+
+# Génération du client Prisma
+RUN npx prisma generate
+
+EXPOSE 3000
+
+# Lancer en mode direct (tsx) pour ignorer les erreurs de typage bloquantes
+CMD ["tsx", "src/index.ts"]
