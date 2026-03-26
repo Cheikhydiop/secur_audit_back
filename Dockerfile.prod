@@ -1,21 +1,45 @@
-FROM node:20-alpine
+# ----- ÉTAPE 1 : BUILD -----
+FROM node:20-alpine AS builder
 
-# Installation des dépendances pour la compilation native
+# Installation des dépendances système nécessaires (Prisma, Argon2, etc.)
 RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
+
+# On copie d'abord package.json pour optimiser le cache Docker
 COPY package*.json ./
 RUN npm install
 
-# Installer tsx globalement pour lancer le code sans compilation préalable
-RUN npm install -g tsx
-
+# Copier le reste du code source
 COPY . .
 
-# Génération du client Prisma
+# Génération du client Prisma (basé sur prisma/schema.prisma)
 RUN npx prisma generate
 
+# Compilation TypeScript réelle vers dist/
+RUN npm run build
+
+# ----- ÉTAPE 2 : RUNTIME -----
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Installer openssl car Prisma en a besoin sous Alpine
+RUN apk add --no-cache openssl
+
+# Copier uniquement package.json pour les deps de prod
+COPY --from=builder /app/package*.json ./
+RUN npm install --omit=dev
+
+# Copier le client Prisma généré et les fichiers compilés
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+
+# Exposer le port par défaut (à adapter en fct de votre env)
 EXPOSE 3000
 
-# Lancer en mode direct (tsx) pour ignorer les erreurs de typage bloquantes
-CMD ["tsx", "src/index.ts"]
+# Utilisation de dumb-init ou juste node pour lancer l'app
+# On utilise node dist/index.js (plus performant que tsx ou ts-node en prod)
+CMD ["node", "dist/index.js"]
