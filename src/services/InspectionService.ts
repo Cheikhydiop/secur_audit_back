@@ -361,7 +361,7 @@ export class InspectionService {
                 const actionDesc = `Non-conformité détectée : ${rep.questionTextSnapshot.replace(/\s*\?$/, '')}`;
                 const actionNotes = `Recommandation : ${rep.recommendation || 'N/A'}`;
 
-                await prisma.actionPlan.create({
+                const action = await prisma.actionPlan.create({
                     data: {
                         inspectionId: id,
                         description: actionDesc,
@@ -373,6 +373,13 @@ export class InspectionService {
                         criticite: this.mapPonderationToCriticite(rep.ponderationSnapshot)
                     }
                 });
+
+                // Lier l'ActionPlan à la Question d'Inspection
+                await prisma.inspectionQuestion.update({
+                    where: { id: rep.id },
+                    data: { idPlanAction: action.id }
+                });
+
                 actionsCreated++;
 
                 // Collecter les actions pour l'email au porteur

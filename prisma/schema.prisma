@@ -152,6 +152,7 @@ model InspectionQuestion {
   recommendation        String?
   photoUrl              String?
   porteurEmail          String?
+  idPlanAction          String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   inspection            Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)

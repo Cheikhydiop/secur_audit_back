@@ -36,12 +36,17 @@ export interface CriticalNonConformite {
     id: string;
     siteNom: string;
     siteId: string;
-    questionTexte: string;
-    categorie: string;
+    zone: string;
+    description: string;
     criticite: string;
     dateDetection: Date;
-    statutAction: string;
+    dateEcheance: Date;
+    statut: string;
+    responsable: string;
     inspectionId: string;
+    idPlanAction: string | null;
+    notes?: string | null;
+    evidencePhotoUrl?: string | null;
 }
 
 export interface ActionPlanSummary {
@@ -145,7 +150,7 @@ export class DashboardService {
                 if (action.statut === StatusAction.EN_RETARD) actionsEnRetard++;
                 if (action.statut === StatusAction.TERMINE) actionsTerminees++;
                 if (action.statut === StatusAction.A_VALIDER) actionsAValider++;
-                if (action.criticite === CriticiteQuestion.CRITIQUE) totalNcCritiques++;
+                if (action.criticite === Criticite.ELEVEE) totalNcCritiques++;
             });
         });
 
@@ -591,51 +596,70 @@ export class DashboardService {
      * Get critical non-conformities list
      */
     async getNonConformitesCritiques(filters: { region?: string; prestataire?: string; typeSite?: string; criticite?: string; statut?: string; periode?: string; startDate?: string; endDate?: string }) {
-        const { startDate, endDate } = this.calculateDateRange(filters.periode, filters.startDate, filters.endDate);
-        const actionWhere: any = {
-            criticite: { in: [Criticite.ELEVEE, Criticite.MOYENNE] },
+        // Pour le mur d'alertes NC Critiques, on prend par défaut sur 12 mois si aucune période spécifiée
+        // car un danger critique reste prioritaire tant qu'il n'est pas soldé.
+        const effectivePeriode = filters.periode || '365';
+        const { startDate, endDate } = this.calculateDateRange(effectivePeriode, filters.startDate, filters.endDate);
+
+        const where: any = {
+            reponse: { in: ['NON_CONFORME', 'NON'] },
             inspection: {
                 date: { gte: startDate, lte: endDate }
             }
         };
 
-        if (filters.criticite) {
-            actionWhere.criticite = filters.criticite as any;
-        }
+        if (filters.region) where.inspection.site = { ...where.inspection.site, zone: filters.region };
+        if (filters.prestataire) where.inspection.site = { ...where.inspection.site, prestataire: filters.prestataire };
+        if (filters.typeSite) where.inspection.site = { ...where.inspection.site, type: filters.typeSite };
 
-        if (filters.statut) {
-            actionWhere.statut = filters.statut as any;
-        }
-
-        const actions = await prisma.actionPlan.findMany({
-            where: actionWhere,
+        const failedQuestions = await prisma.inspectionQuestion.findMany({
+            where,
             include: {
                 inspection: {
-                    include: {
-                        site: true
-                    }
-                },
-                responsable: {
-                    select: { name: true }
+                    include: { site: true, inspecteur: true }
                 }
             },
             orderBy: { createdAt: 'desc' },
-            take: 100
+            take: 200
         });
 
-        return actions.map(action => ({
-            id: action.id,
-            siteId: action.inspection.site.id,
-            siteNom: action.inspection.site.nom,
-            zone: action.inspection.site.zone,
-            description: action.description,
-            criticite: action.criticite,
-            dateDetection: action.createdAt,
-            dateEcheance: action.dateEcheance,
-            statut: action.statut,
-            responsable: action.responsable.name,
-            inspectionId: action.inspectionId
-        }));
+        // To get action plan statuses, we need the plans associated with these questions
+        const actionPlanIds = failedQuestions.map(q => q.idPlanAction).filter(Boolean) as string[];
+
+        const actionPlans: any[] = actionPlanIds.length > 0 ? await prisma.actionPlan.findMany({
+            where: { id: { in: actionPlanIds } },
+            select: {
+                id: true,
+                statut: true,
+                notes: true,
+                evidencePhotoUrl: true,
+                dateEcheance: true,
+                responsable: { select: { name: true } }
+            }
+        }) : [];
+
+        const actionPlansMap = new Map(actionPlans.map(ap => [ap.id, ap]));
+
+        return failedQuestions.map(q => {
+            const ap = q.idPlanAction ? actionPlansMap.get(q.idPlanAction) : null;
+
+            return {
+                id: q.id,
+                siteId: q.inspection.siteId,
+                siteNom: q.inspection.site.nom,
+                zone: q.inspection.site.zone || 'Dakar',
+                description: q.questionTextSnapshot,
+                criticite: q.criticiteSnapshot,
+                dateDetection: q.createdAt,
+                dateEcheance: (ap as any)?.dateEcheance ? (ap as any).dateEcheance : new Date(q.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000),
+                statut: ap?.statut || 'SANS_PA',
+                responsable: ap?.responsable?.name || 'Non assigné',
+                inspectionId: q.inspectionId,
+                idPlanAction: q.idPlanAction,
+                notes: q.observation || ap?.notes,
+                evidencePhotoUrl: q.photoUrl || ap?.evidencePhotoUrl
+            };
+        });
     }
 
     /**
