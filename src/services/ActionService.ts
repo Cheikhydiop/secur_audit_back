@@ -12,12 +12,13 @@ export class ActionService {
         private emailService: EmailService
     ) { }
 
-    async findAll(filters: { statut?: StatusAction; siteId?: string; userId: string; role: string; page?: number; limit?: number }) {
-        const { statut, siteId, userId, role, page = 1, limit = 20 } = filters;
+    async findAll(filters: { statut?: StatusAction; siteId?: string; criticite?: string; userId: string; role: string; page?: number; limit?: number }) {
+        const { statut, siteId, criticite, userId, role, page = 1, limit = 500 } = filters;
         const skip = (page - 1) * limit;
 
         const where: any = {};
         if (statut) where.statut = statut;
+        if (criticite) where.criticite = criticite;
 
         if (siteId) {
             where.inspection = { siteId };
@@ -714,6 +715,60 @@ export class ActionService {
             include: { user: { select: { id: true, name: true } } },
             orderBy: { createdAt: 'asc' }
         });
+    }
+
+    /**
+     * Envoyer une alerte urgente par email pour une action critique
+     */
+    async sendUrgentAlert(id: string, senderId: string) {
+        const action = await prisma.actionPlan.findUnique({
+            where: { id },
+            include: {
+                inspection: {
+                    include: { site: true }
+                },
+                responsable: true
+            }
+        });
+
+        if (!action) throw new Error('Action non trouvée');
+
+        const sender = await prisma.user.findUnique({ where: { id: senderId } });
+
+        // Email au responsable
+        if (action.responsable?.email) {
+            const content = `
+                <p>Bonjour ${action.responsable.name},</p>
+                <p>La Direction de la Sécurité (DG-SECU) a émis une <strong>ALERTE DE SÛRETÉ CRITIQUE</strong> concernant une non-conformité majeure sur le site :</p>
+                
+                <div style="background-color: #FFF5F5; border-left: 5px solid #E14332; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-weight: 800; color: #E14332; font-size: 11px; text-transform: uppercase;">📍 Site concerné :</p>
+                    <p style="margin: 5px 0 15px 0; font-size: 18px; font-weight: 800; color: #111;">${action.inspection?.site?.nom} (${action.inspection?.site?.code})</p>
+                    
+                    <p style="margin: 0; font-weight: 800; color: #E14332; font-size: 11px; text-transform: uppercase;">⚠️ Anomalie détectée :</p>
+                    <p style="margin: 5px 0 15px 0; font-size: 15px; color: #333; line-height: 1.6;">${action.description}</p>
+                    
+                    <p style="margin: 0; font-size: 13px; font-weight: bold; color: #d32f2f;">📅 Échéance impérative : ${new Date(action.dateEcheance).toLocaleDateString('fr-FR')}</p>
+                </div>
+
+                <div class="highlight-box">
+                    <p style="margin: 0; font-weight: 900; color: #111;">🎯 Action Requise :</p>
+                    <p style="margin: 8px 0 0 0; color: #444;">Cette alerte a été déclenchée manuellement par <strong>${sender?.name || 'la Direction de la Sécurité'}</strong> via le Mur d'Urgences. Un plan de remédiation immédiat est exigé sous 24h.</p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="${process.env.FRONTEND_URL}/actions/${action.id}" class="btn" style="background-color: #E14332;">Intervenir Immédiatement</a>
+                </div>
+            `;
+
+            await this.emailService.sendEmailSafe({
+                to: action.responsable.email,
+                subject: `🚨 ALERTE SÛRETÉ CRITIQUE : Site ${action.inspection?.site?.nom}`,
+                html: this.emailService.wrapWithBranding('Alerte de Sûreté Prioritaire', content)
+            });
+        }
+
+        return { success: true };
     }
 }
 

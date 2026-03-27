@@ -300,5 +300,6 @@ router.post('/:id/proposer-cloture', ctrl.proposerCloture);
  *     tags: [Actions]
  */
 router.post('/:id/valider-cloture', authorize(['ADMIN', 'INSPECTEUR']), ctrl.validerCloture);
+router.post('/:id/send-urgent-alert', authorize(['ADMIN', 'SUPER_ADMIN', 'INSPECTEUR']), ctrl.sendUrgentAlert);
 
 export default router;

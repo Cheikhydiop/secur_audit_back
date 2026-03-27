@@ -56,7 +56,7 @@ export class EmailService {
   /**
    * Helper pour envelopper le contenu avec le branding Sonatel
    */
-  private wrapWithBranding(title: string, content: string): string {
+  public wrapWithBranding(title: string, content: string): string {
     const currentYear = new Date().getFullYear();
     return `
       <!DOCTYPE html>

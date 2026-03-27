@@ -9,11 +9,16 @@ export class SiteService {
         status?: string;
         page?: number;
         limit?: number;
+        withInspections?: boolean;
     }) {
-        const { region, search, status, page = 1, limit = 20 } = filters;
+        const { region, search, status, page = 1, limit = 20, withInspections } = filters;
         const skip = (page - 1) * limit;
 
         const where: any = {};
+
+        if (withInspections) {
+            where.inspections = { some: {} };
+        }
 
         // Search by name or code
         if (search) {

@@ -217,6 +217,8 @@ model ActionPlan {
 
   @@index([inspectionId])
   @@index([responsableId])
+  @@index([criticite])
+  @@index([statut])
 }
 
 model ActionComment {

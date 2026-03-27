@@ -10,12 +10,13 @@ export class ActionController {
 
     getAll = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { statut, siteId } = req.query;
+            const { statut, siteId, criticite } = req.query;
             const userId = (req as any).user.userId;
             const role = (req as any).user.role;
             const data = await this.actionService.findAll({
                 statut: statut as StatusAction,
                 siteId: siteId as string,
+                criticite: criticite as string,
                 userId,
                 role
             });
@@ -234,6 +235,16 @@ export class ActionController {
             const { content } = req.body;
             const data = await this.actionService.addComment(req.params['id'] as string, userId, content);
             res.json({ success: true, data });
+        } catch (err: any) {
+            res.status(400).json({ success: false, message: err.message });
+        }
+    };
+
+    sendUrgentAlert = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const userId = (req as any).user.userId;
+            const data = await this.actionService.sendUrgentAlert(req.params['id'] as string, userId);
+            res.json({ success: true, data, message: 'Alerte urgente envoyée par email' });
         } catch (err: any) {
             res.status(400).json({ success: false, message: err.message });
         }
