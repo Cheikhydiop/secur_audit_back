@@ -22,7 +22,7 @@ export class InspectionController {
 
             // Si c'est un inspecteur, il ne voit que ses inspections
             if (user.role === 'INSPECTEUR') {
-                inspecteurId = user.id;
+                inspecteurId = user.userId;
             }
 
             const data = await this.inspectionService.findAll({
@@ -63,7 +63,7 @@ export class InspectionController {
             }
 
             // Sécurité : Seul l'inspecteur assigné ou un Admin/Dirigeant peut voir le détail
-            if (user.role === 'INSPECTEUR' && data.inspecteurId !== user.id) {
+            if (user.role === 'INSPECTEUR' && data.inspecteurId !== user.userId) {
                 res.status(403).json({ success: false, message: 'Accès non autorisé à cette inspection' });
                 return;
             }
@@ -88,7 +88,7 @@ export class InspectionController {
 
             // Sécurité : Vérifier le droit d'accès aux questions
             const inspection = await this.inspectionService.findById(inspectionId);
-            if (user.role === 'INSPECTEUR' && inspection?.inspecteurId !== user.id) {
+            if (user.role === 'INSPECTEUR' && inspection?.inspecteurId !== user.userId) {
                 res.status(403).json({ success: false, message: 'Accès non autorisé' });
                 return;
             }
@@ -123,7 +123,7 @@ export class InspectionController {
             }
 
             // Sécurité : Seul l'inspecteur assigné peut modifier son brouillon
-            if (user.role === 'INSPECTEUR' && inspection.inspecteurId !== user.id) {
+            if (user.role === 'INSPECTEUR' && inspection.inspecteurId !== user.userId) {
                 res.status(403).json({ success: false, message: 'Vous ne pouvez pas modifier cette inspection' });
                 return;
             }
@@ -154,7 +154,7 @@ export class InspectionController {
                 return;
             }
 
-            if (user.role === 'INSPECTEUR' && inspection.inspecteurId !== user.id) {
+            if (user.role === 'INSPECTEUR' && inspection.inspecteurId !== user.userId) {
                 res.status(403).json({ success: false, message: 'Accès refusé' });
                 return;
             }

@@ -54,7 +54,7 @@ export class AuthController {
   // POST /api/auth/logout
   logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const sessionId = (req as any).sessionId; // Assuming middleware sets this
 
       if (userId && sessionId) {
@@ -70,7 +70,7 @@ export class AuthController {
   // GET /api/auth/profile
   getProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       if (!userId) {
         res.status(401).json({ success: false, message: 'Non authentifié' });
         return;
@@ -116,7 +116,7 @@ export class AuthController {
   // POST /api/auth/change-password
   changePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const result = await this.authService.changePassword(userId, req.body, req);
       res.json({ success: true, message: result.message });
     } catch (error) {
@@ -127,7 +127,7 @@ export class AuthController {
   // POST /api/auth/request-password-change-otp
   requestPasswordChangeOTP = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const result = await this.authService.requestPasswordChangeOTP(userId);
       res.json({ success: true, message: result.message });
     } catch (error) {
@@ -138,7 +138,7 @@ export class AuthController {
   // POST /api/auth/change-password-otp
   changePasswordWithOTP = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const result = await this.authService.changePasswordWithOTP(userId, req.body, req);
       res.json({ success: true, message: result.message });
     } catch (error) {
@@ -149,7 +149,7 @@ export class AuthController {
   // POST /api/auth/verify-otp-only
   verifyOTPOnly = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const result = await this.authService.verifyOTPOnly(userId, req.body, req);
       res.json({ success: true, message: result.message });
     } catch (error) {
@@ -174,7 +174,7 @@ export class AuthController {
   // GET /api/auth/sessions
   getSessions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       if (!userId) {
         res.status(401).json({ success: false, message: 'Non authentifié' });
         return;
@@ -189,7 +189,7 @@ export class AuthController {
   // DELETE /api/auth/sessions/:sessionId
   revokeSession = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const { sessionId } = req.params;
 
       if (!userId) {
@@ -235,7 +235,7 @@ export class AuthController {
   // PUT /api/auth/profile
   updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const result = await this.authService.updateProfile(userId, req.body, req);
       res.json({ success: true, data: result.user, message: result.message });
     } catch (error) {
@@ -246,7 +246,7 @@ export class AuthController {
   // POST /api/auth/deactivate
   deactivateAccount = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       await (this.authService as any).deactivateAccount(userId, req.body, req);
       res.json({ success: true, message: 'Compte désactivé avec succès' });
     } catch (error) {
@@ -268,7 +268,7 @@ export class AuthController {
   // DELETE /api/auth/sessions
   revokeAllSessions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       if (!userId) {
         res.status(401).json({ success: false, message: 'Non authentifié' });
         return;

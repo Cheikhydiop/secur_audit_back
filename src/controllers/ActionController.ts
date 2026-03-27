@@ -40,7 +40,7 @@ export class ActionController {
             if (user.role === 'INSPECTEUR' || user.role === 'DIRIGEANT') {
                 // Logique de filtrage si nécessaire, ou on laisse passer si le service gère déjà
                 // Mais par précaution :
-                const isOwner = data.responsableId === user.id || data.inspection?.inspecteurId === user.id;
+                const isOwner = data.responsableId === user.userId || data.inspection?.inspecteurId === user.userId;
                 if (!isOwner && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
                     res.status(403).json({ success: false, message: 'Accès non autorisé' });
                     return;
@@ -89,7 +89,7 @@ export class ActionController {
             }
 
             // Seul l'Admin ou le créateur (Inspecteur de l'inspection liée) peut modifier les détails structurels
-            const isCreator = action.inspection?.inspecteurId === user.id;
+            const isCreator = action.inspection?.inspecteurId === user.userId;
             if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN' && !isCreator) {
                 res.status(403).json({ success: false, message: 'Modification non autorisée' });
                 return;
@@ -116,8 +116,8 @@ export class ActionController {
             }
 
             // Vérifier si l'utilisateur est le responsable assigné ou un Admin/Inspecteur lié
-            const isAuthorized = action.responsableId === user.id ||
-                action.inspection?.inspecteurId === user.id ||
+            const isAuthorized = action.responsableId === user.userId ||
+                action.inspection?.inspecteurId === user.userId ||
                 user.role === 'ADMIN' ||
                 user.role === 'SUPER_ADMIN';
 

@@ -11,7 +11,7 @@ export class PlanningController {
     // GET /api/planning → Planning de l'inspecteur connecté
     getMyPlanning = async (req: Request, res: Response): Promise<void> => {
         try {
-            const userId = (req as any).user.id;
+            const userId = (req as any).user.userId;
             const mois = req.query.mois ? Number(req.query.mois) : undefined;
             const annee = req.query.annee ? Number(req.query.annee) : undefined;
             const data = await planningService.getPlanningInspecteur(userId, mois, annee);
@@ -132,7 +132,7 @@ export class PlanningController {
     // GET /api/planning/stats → Statistiques des inspections
     getStats = async (req: Request, res: Response): Promise<void> => {
         try {
-            const userId = (req as any).user.id;
+            const userId = (req as any).user.userId;
             const userRole = (req as any).user.role;
             const inspecteurId = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
                 ? (req.query.inspecteurId as string) || undefined
@@ -196,7 +196,7 @@ export class PlanningController {
             }
 
             // Sécurité : Un inspecteur ne voit que ses missions ou missions de son entité
-            if (user.role === 'INSPECTEUR' && data.inspecteurId !== user.id && data.inspecteur?.entite !== user.entite) {
+            if (user.role === 'INSPECTEUR' && data.inspecteurId !== user.userId && data.inspecteur?.entite !== user.entite) {
                 res.status(403).json({ success: false, message: 'Accès non autorisé à cette mission' });
                 return;
             }
@@ -257,7 +257,7 @@ export class PlanningController {
     startInspection = async (req: Request, res: Response): Promise<void> => {
         try {
             const missionId = req.params['id'] as string;
-            const userId = (req as any).user.id;
+            const userId = (req as any).user.userId;
             const userRole = (req as any).user.role;
             const userEntite = (req as any).user.entite;
 
@@ -293,7 +293,7 @@ export class PlanningController {
     finishInspection = async (req: Request, res: Response): Promise<void> => {
         try {
             const missionId = req.params['id'] as string;
-            const userId = (req as any).user.id;
+            const userId = (req as any).user.userId;
             const userRole = (req as any).user.role;
             const { dateRealisation, gpsData } = req.body;
 
@@ -329,7 +329,7 @@ export class PlanningController {
         try {
             const missionId = req.params['id'] as string;
             const { statut } = req.body;
-            const userId = (req as any).user.id;
+            const userId = (req as any).user.userId;
             const userRole = (req as any).user.role;
 
             // Validation du statut

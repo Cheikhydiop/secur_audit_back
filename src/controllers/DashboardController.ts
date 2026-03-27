@@ -20,7 +20,7 @@ export class DashboardController {
         try {
             const { periode, region, site, prestataire, typeSite, startDate, endDate } = req.query;
             const user = (req as any).user;
-            const inspecteurId = user.role === 'INSPECTEUR' ? user.id : undefined;
+            const inspecteurId = user.role === 'INSPECTEUR' ? user.userId : undefined;
 
             const data = await this.service.getEnhancedKpis({
                 periode: periode as string,
@@ -136,7 +136,7 @@ export class DashboardController {
         try {
             const { startDate, endDate, periode } = req.query;
             const user = (req as any).user;
-            const inspecteurId = user.role === 'INSPECTEUR' ? user.id : undefined;
+            const inspecteurId = user.role === 'INSPECTEUR' ? user.userId : undefined;
             const data = await this.service.getActionsStats(
                 inspecteurId,
                 periode as string,
@@ -183,7 +183,7 @@ export class DashboardController {
         try {
             const { siteId, periode, region, prestataire, typeSite } = req.query;
             const user = (req as any).user;
-            const inspecteurId = user.role === 'INSPECTEUR' ? user.id : undefined;
+            const inspecteurId = user.role === 'INSPECTEUR' ? user.userId : undefined;
             const data = await this.service.getEvolution({
                 siteId: siteId as string,
                 inspecteurId,
@@ -203,7 +203,7 @@ export class DashboardController {
         try {
             const { siteId, rubrike, periode } = req.query;
             const user = (req as any).user;
-            const inspecteurId = user.role === 'INSPECTEUR' ? user.id : undefined;
+            const inspecteurId = user.role === 'INSPECTEUR' ? user.userId : undefined;
 
             const data = await this.service.getConformite({
                 siteId: siteId as string,
@@ -256,7 +256,7 @@ export class DashboardController {
         try {
             const filters = req.query;
             const user = (req as any).user;
-            const inspecteurId = user.role === 'INSPECTEUR' ? user.id : undefined;
+            const inspecteurId = user.role === 'INSPECTEUR' ? user.userId : undefined;
 
             // Gather all data for the report
             const [kpis, evolution, sites] = await Promise.all([
@@ -287,7 +287,7 @@ export class DashboardController {
             const report = await this.rapportService.generateDashboardReport(
                 filters,
                 { kpis: (kpis as any).data || kpis, evolution, sites: (sites as any).data || sites },
-                user.id
+                user.userId
             );
 
             res.json({ success: true, data: report });
